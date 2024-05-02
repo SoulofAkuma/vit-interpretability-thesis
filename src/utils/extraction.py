@@ -16,6 +16,35 @@ def extract_value_vectors(vit: VisionTransformer, device=None) -> List[torch.Ten
     result = [block.mlp.fc2.weight.detach().T for block in vit.blocks]
     return result if device is None else [t.to(device) for t in result]
 
+def extract_mhsa_proj_vectors(vit: VisionTransformer, device=None) -> List[torch.Tensor]:
+    """Extract the projection vectors of the MHSA blocks of a vision transformer by block
+
+    Args:
+        vit (VisionTransformer): a vision transformer 
+        device (string, optional): The device to move the result to. Defaults to None.
+
+    Returns:
+        List[torch.Tensor]: A list of projection vector matrices for each block
+    """
+    result = [block.attn.proj.weight.detach().T for block in vit.blocks]
+    return result if device is None else [t.to(device) for t in result]
+
+def extract_mhsa_value_vectors(vit: VisionTransformer, embed_dim: int=768,
+                               device=None) -> List[torch.Tensor]:
+    """Extract the value vectors of the MHSA blocks of a vision transformer by block
+
+    Args:
+        vit (VisionTransformer): A vision transformer
+        embed_dim (int, optional): The embedding dim of the vision transformer to extract
+        the correct slice of the qkv weight matrix. Defaults to 768.
+        device (_type_, optional): The device to move the result to. Defaults to None.
+
+    Returns:
+        List[torch.Tensor]: A list of value vector matrices for each block
+    """
+    result = [block.attn.qkv.weight.detach().T[:,2*embed_dim:] for block in vit.blocks]
+    return result if device is None else [t.to(device) for t in result]
+
 def extract_key_weights(vit: VisionTransformer) -> List[torch.Tensor]:
     """Extract the key vectors of the MLP heads of a vision transformer by block
 

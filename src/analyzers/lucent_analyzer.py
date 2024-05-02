@@ -3,7 +3,7 @@ from timm.models.vision_transformer import VisionTransformer
 import torch
 from src.utils.extraction import extract_value_vectors
 from src.utils.model import embedding_projection
-from src.analyzers.mlp_value_analyzer import most_predictive_ind_for_class
+from src.analyzers.mlp_value_analyzer import most_predictive_ind_for_classes
 from src.utils.imagenet import get_index_for_imagenet_id
 from torch.utils.data import DataLoader
 from src.utils.transformation import transform_images
@@ -39,7 +39,7 @@ def get_topk_activating_images(model: VisionTransformer, dataset: IndexDataset,
 
     values = extract_value_vectors(model, device)
     proj_values = embedding_projection(model, values, device)
-    most_pred_inds = most_predictive_ind_for_class(proj_values, device)
+    most_pred_inds = most_predictive_ind_for_classes(proj_values, device)
 
     loop = tqdm.tqdm(range(len(dataset))) if show_progression else range(len(dataset))
 

@@ -3,7 +3,7 @@ TestNotebook.ipynb
 **/.ipynb_checkpoints/*
 **/results/*
 **/build/*
-dlcv_vit_mlp_explainability.egg-info/*
+vit_interpretability_thesis.egg-info/*
 configs/*
 configs-mixed-neurons/*
 images/*

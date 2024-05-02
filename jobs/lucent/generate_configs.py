@@ -5,7 +5,7 @@ from timm import create_model
 import torch
 from src.utils.extraction import extract_value_vectors
 from src.utils.model import embedding_projection
-from src.analyzers.mlp_value_analyzer import most_predictive_ind_for_class
+from src.analyzers.mlp_value_analyzer import most_predictive_ind_for_classes
 
 MODEL = 'vit_base_patch16_384'
 MODEL_IMG_SIZE = 384
@@ -25,7 +25,7 @@ def create_configs(dir: str):
 
     values = extract_value_vectors(model, device=device)
     embedded_values = embedding_projection(model, values, device=device).to(device)
-    most_pred_inds = most_predictive_ind_for_class(embedded_values, device=device)
+    most_pred_inds = most_predictive_ind_for_classes(embedded_values, device=device)
 
     configs = []
 

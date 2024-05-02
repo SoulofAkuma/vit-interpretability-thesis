@@ -5,7 +5,7 @@ from timm import create_model
 import torch
 from src.utils.extraction import extract_value_vectors
 from src.utils.model import embedding_projection
-from src.analyzers.mlp_value_analyzer import k_most_predictive_ind_for_class
+from src.analyzers.mlp_value_analyzer import k_most_predictive_ind_for_classes
 from typing import Dict, List, Tuple
 import torch.nn.functional as F
 
@@ -27,7 +27,7 @@ def create_configs(dir: str):
 
     values = extract_value_vectors(model, device=device)
     embedded_values = embedding_projection(model, values, device=device).to(device)
-    most_pred_inds = k_most_predictive_ind_for_class(embedded_values, 4, device=device)
+    most_pred_inds = k_most_predictive_ind_for_classes(embedded_values, 4, device=device)
 
     configs = []
 

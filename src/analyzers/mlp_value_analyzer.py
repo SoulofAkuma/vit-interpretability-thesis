@@ -26,10 +26,10 @@ def most_predictive_vec_for_classes(values: Union[torch.Tensor, List[torch.Tenso
         values = torch.stack(values, dim=0)
         values = values if device is None else values.to(device)
 
-    indices = most_predictive_ind_for_class(projected_values, device=device)
+    indices = most_predictive_ind_for_classes(projected_values, device=device)
     return values[tuple(indices[0]), tuple(indices[1]), :], indices[:2, :]
 
-def most_predictive_ind_for_class(projected_values: Union[torch.Tensor, List[torch.Tensor]], device=None) -> torch.Tensor:
+def most_predictive_ind_for_classes(projected_values: Union[torch.Tensor, List[torch.Tensor]], device=None) -> torch.Tensor:
     """Retrieve index pairs (block, matrix col, class) that contain the block and matrix column
         of the value vectors that best predicts that class when projected
 
@@ -60,7 +60,7 @@ def most_predictive_ind_for_class(projected_values: Union[torch.Tensor, List[tor
                         class_indices], dim=0)
     return result if device is None else result.to(device)
 
-def k_most_predictive_ind_for_class(projected_values: Union[torch.Tensor, List[torch.Tensor]], 
+def k_most_predictive_ind_for_classes(projected_values: Union[torch.Tensor, List[torch.Tensor]], 
                                     k: int, device: str=None) -> torch.Tensor:
     """Get the index of the k most predictive value vectors.
 
