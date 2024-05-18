@@ -7,3 +7,5 @@ vit_interpretability_thesis.egg-info/*
 configs/*
 configs-mixed-neurons/*
 images/*
+images-mixed-neurons/*
+job-reports/*

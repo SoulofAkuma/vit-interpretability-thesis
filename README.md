@@ -3,3 +3,11 @@ We will be using the Validation part of the ImageNet-1k Dataset in this project.
 
 ### Using the `TestNotebook.ipynb` Notebook
 If you wish to use the test notebook, please run the command `git update-index --skip-worktree TestNotebook.ipynb` to keep the changes to your notebook on your local machine and not commit it to the repo.
+
+### Setting up the Environment
+```sh
+conda create --name vit-interpretability-thesis python=3.9
+conda activate vit-interpretability-thesis
+python -m pip install -r requirements.txt
+python -m pip install .
+```

@@ -3,7 +3,7 @@ from timm.models.vision_transformer import VisionTransformer
 import torch
 from src.utils.extraction import extract_value_vectors
 from src.utils.model import embedding_projection
-from src.analyzers.mlp_value_analyzer import most_predictive_ind_for_classes
+from src.analyzers.vector_analyzer import most_predictive_ind_for_classes
 from src.utils.imagenet import get_index_for_imagenet_id
 from torch.utils.data import DataLoader
 from src.utils.transformation import transform_images

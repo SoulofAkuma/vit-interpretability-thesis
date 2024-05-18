@@ -5,7 +5,7 @@ from timm import create_model
 import torch
 from src.utils.extraction import extract_value_vectors
 from src.utils.model import embedding_projection
-from src.analyzers.mlp_value_analyzer import most_predictive_ind_for_classes
+from src.analyzers.vector_analyzer import most_predictive_ind_for_classes
 
 MODEL = 'vit_base_patch16_384'
 MODEL_IMG_SIZE = 384

@@ -2,7 +2,8 @@ import torch
 from typing import List, Union
 
 def most_predictive_vec_for_classes(values: Union[torch.Tensor, List[torch.Tensor]], 
-                                    projected_values: Union[torch.Tensor, List[torch.Tensor]], device=None):
+                                    projected_values: Union[torch.Tensor, List[torch.Tensor]], 
+                                    device=None):
     """Get the value vectors and the indices (block, matrix col) for each class that
         best predict that class when projected
 
@@ -29,7 +30,8 @@ def most_predictive_vec_for_classes(values: Union[torch.Tensor, List[torch.Tenso
     indices = most_predictive_ind_for_classes(projected_values, device=device)
     return values[tuple(indices[0]), tuple(indices[1]), :], indices[:2, :]
 
-def most_predictive_ind_for_classes(projected_values: Union[torch.Tensor, List[torch.Tensor]], device=None) -> torch.Tensor:
+def most_predictive_ind_for_classes(projected_values: Union[torch.Tensor, List[torch.Tensor]],
+                                    device=None) -> torch.Tensor:
     """Retrieve index pairs (block, matrix col, class) that contain the block and matrix column
         of the value vectors that best predicts that class when projected
 
@@ -85,3 +87,20 @@ def k_most_predictive_ind_for_classes(projected_values: Union[torch.Tensor, List
     result = torch.stack([block_indices, row_indices]).swapaxes(0, 1)
 
     return result if device is None else result.to(device)
+
+def most_predictive_ind_for_classes_by_block(projected_values: Union[torch.Tensor, List[torch.Tensor]], 
+                                             device=None) -> torch.Tensor:
+    """_summary_
+
+    Args:
+        values (Union[torch.Tensor, List[torch.Tensor]]): _description_
+        projected_values (Union[torch.Tensor, List[torch.Tensor]]): _description_
+        device (_type_, optional): _description_. Defaults to None.
+    """
+    if type(projected_values) is list:
+        projected_values = torch.stack(projected_values, dim=0)
+
+    _, _, classes = projected_values.shape
+    _, best_repr_in_value = projected_values.max(1)
+
+    return best_repr_in_value if device is None else best_repr_in_value.to(device)
