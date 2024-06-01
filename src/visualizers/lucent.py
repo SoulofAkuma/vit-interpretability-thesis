@@ -48,8 +48,6 @@ def generate_mhsa_projection_objective(model: VisionTransformer, block: int, col
     projection_input = {'value': None}
     def hook(module, input, output):
         projection_input['value'] = input[0]
-        proj = F.softmax(embedding_projection(model, [output[0, :, :]], "cuda"), dim=1)
-        # print("score", proj.shape, proj[0, :, cls_index].mean())
 
 
     removableHandle = model.blocks[block].attn.proj.register_forward_hook(hook)

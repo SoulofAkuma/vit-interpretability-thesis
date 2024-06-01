@@ -5,7 +5,7 @@ from torchvision.models.feature_extraction import create_feature_extractor
 
 __KEY_VECTOR_EXTRACTORS = {}
 
-def extract_value_vectors(vit: VisionTransformer, device=None) -> List[torch.Tensor]:
+def extract_value_vectors(vit: VisionTransformer, device=None, with_bias=False) -> List[torch.Tensor]:
     """Extract the value vectors of the MLP heads of a vision transformer by block
 
     Args:
@@ -13,7 +13,8 @@ def extract_value_vectors(vit: VisionTransformer, device=None) -> List[torch.Ten
     Returns:
         List[torch.Tensor]: A list of value vector matrices for each block
     """
-    result = [block.mlp.fc2.weight.detach().T for block in vit.blocks]
+    result = [block.mlp.fc2.weight.detach().T + (block.mlp.fc2.bias.detach() if with_bias else 0) 
+              for block in vit.blocks]
     return result if device is None else [t.to(device) for t in result]
 
 def extract_mhsa_proj_vectors(vit: VisionTransformer, device=None) -> List[torch.Tensor]:

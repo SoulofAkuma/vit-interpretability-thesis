@@ -15,4 +15,4 @@
 conda init
 conda activate /scratch/vihps/vihps01/vit-interpretability-thesis/env
 
-srun python3 /scratch/vihps/vihps01/vit-interpretability-thesis/code/jobs/lucent/generate_configs_mixed_neurons.py --output-dir /scratch/vihps/vihps01/vit-interpretability-thesis/configs-mixed-neurons
+srun python3 /scratch/vihps/vihps01/vit-interpretability-thesis/code/jobs/lucent/generate_configs_by_block.py --output-dir /scratch/vihps/vihps01/vit-interpretability-thesis/configs-by-block

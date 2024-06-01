@@ -9,3 +9,5 @@ configs-mixed-neurons/*
 images/*
 images-mixed-neurons/*
 job-reports/*
+configs-by-block/*
+images-by-block/*

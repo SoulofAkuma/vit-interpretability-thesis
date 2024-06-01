@@ -5,9 +5,9 @@ from generate_images import generate_images
 from PIL import Image
 import time
 
-CONFIG_PATH = '/scratch/vihps/vihps01/vit-mlp-explainability/configs'
-RESULTS_PATH = '/scratch/vihps/vihps01/vit-mlp-explainability/images'
-RESULT_STATS_PATH = '/scratch/vihps/vihps01/vit-mlp-explainability/job-reports'
+CONFIG_PATH = '/scratch/vihps/vihps01/vit-interpretability-thesis/configs'
+RESULTS_PATH = '/scratch/vihps/vihps01/vit-interpretability-thesis/images'
+RESULT_STATS_PATH = '/scratch/vihps/vihps01/vit-interpretability-thesis/job-reports'
 
 os.makedirs(CONFIG_PATH, exist_ok=True)
 os.makedirs(RESULTS_PATH, exist_ok=True)
