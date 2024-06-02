@@ -15,5 +15,7 @@
 conda init
 conda activate /scratch/vihps/vihps01/vit-interpretability-thesis/env
 
-export MIOPEN_USER_DB_PATH=/scratch/vihps/vihps01/.config/miopen_$SLURM_PROCID/
+export MIOPEN_USER_DB_PATH=/scratch/vihps/vihps01/vit-interpretability-thesis/.config/miopen_$SLURM_PROCID/
+export MIOPEN_DEBUG_DISABLE_SQL_WAL=1
+
 srun python3 /scratch/vihps/vihps01/vit-interpretability-thesis/code/jobs/lucent/run_by_block.py
