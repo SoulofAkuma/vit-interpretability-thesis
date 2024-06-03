@@ -17,7 +17,7 @@ job_index = os.environ['SLURM_PROCID']
 node_name = os.environ['SLURMD_NODENAME']
 
 os.environ['MIOPEN_USER_DB_PATH'] = f'/scratch/vihps/vihps01/vit-interpretability-thesis/.config/miopen_{job_index}/'
-os.environ['MIOPEN_DEBUG_DISABLE_SQL_WAL'] = 1
+os.environ['MIOPEN_DEBUG_DISABLE_SQL_WAL'] = '1'
 
 config = None
 with open(os.path.join(CONFIG_PATH, f'config_{job_index}.json'), 'r') as file:
