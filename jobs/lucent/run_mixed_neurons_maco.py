@@ -5,12 +5,9 @@ from generate_images_mixed_neurons_maco import generate_images
 from PIL import Image
 import time
 
-# CONFIG_PATH = '/scratch/vihps/vihps01/vit-interpretability-thesis/configs-mixed-neurons-maco'
-# RESULTS_PATH = '/scratch/vihps/vihps01/vit-interpretability-thesis/images-mixed-neurons-maco'
-# RESULT_STATS_PATH = '/scratch/vihps/vihps01/vit-interpretability-thesis/job-reports'
-CONFIG_PATH = 'A:\\My Drive\\Unviersity\\Thesis\\repo\\configs-mixed-neurons-maco'
-RESULTS_PATH = 'A:\\My Drive\\Unviersity\\Thesis\\repo\\images-mixed-neurons-maco'
-RESULT_STATS_PATH = 'A:\\My Drive\\Unviersity\\Thesis\\repo\\job-reports'
+CONFIG_PATH = '/scratch/vihps/vihps01/vit-interpretability-thesis/configs-mixed-neurons-maco'
+RESULTS_PATH = '/scratch/vihps/vihps01/vit-interpretability-thesis/images-mixed-neurons-maco'
+RESULT_STATS_PATH = '/scratch/vihps/vihps01/vit-interpretability-thesis/job-reports'
 
 
 os.makedirs(CONFIG_PATH, exist_ok=True)
