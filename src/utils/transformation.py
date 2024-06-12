@@ -23,7 +23,7 @@ def transform_images(images: Union[Image.Image, List[Image.Image]],
     
     if model not in __TRANSFORMATIONS:
         __TRANSFORMATIONS[model] = AutoImageProcessor.from_pretrained(model)
-    if type(images) == list:
+    if type(images) is list:
         return [__TRANSFORMATIONS[model](image, return_tensors='pt')['pixel_values'].to(device)
                 for image in images]
     else:

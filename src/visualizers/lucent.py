@@ -153,7 +153,7 @@ def generate_most_stimulative_for_imgnet_id(model: VisionTransformer, imagenet_i
                                             iterations: List[int]=None, div_weight: float=-1e3,
                                             img_size: int=128, model_img_size: int=224,
                                             keys_before_nonlinear: bool=True,
-                                            optimize_cls_token_only=False) -> np.array:
+                                            optimize_cls_token_only: bool=False) -> np.array:
     """Generate the most stimulative image for the top value vector of an ImageNet class, maximizing 
     the corresponding key vector while optionally enforcing a diversity objective along a batch of images.
 

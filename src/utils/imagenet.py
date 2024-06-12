@@ -1,6 +1,10 @@
 import os
 import pandas as pd
-from typing import Union, List
+from typing import Union, List, Tuple, Optional
+import torch
+import numpy as np
+from torchvision.datasets.utils import download_url
+import torch.nn.functional as F
 
 MAPPING_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), 
@@ -20,8 +24,11 @@ IMG_FRAME.drop('variable', axis=1, inplace=True)
 MAPPING_FRAME.reset_index(names='num_idx', inplace=True)
 MAPPING_FRAME.set_index('imagenet_id', inplace=True)
 
+MACO_MAGNITUDES_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '../data/maco_magnitudes.npy'))
+MACO_MAGNITUDES_URL = ("https://storage.googleapis.com/serrelab/loupe/spectrums/imagenet_decorrelated.npy")
 
-def get_categories(max_nr: Union[int,None] = None, seed: Union[int,None] = None) -> List[str]:
+def get_categories(max_nr: Optional[int] = None, seed: Optional[int] = None) -> List[str]:
     """Get all or a subset of categories represented in the dataset
 
     Args:
@@ -66,3 +73,23 @@ def get_names_for_imagenet_ids(imagenet_ids: List[str]) -> List[str]:
         List[str]: The list of readable names i.e. pineapple
     """
     return MAPPING_FRAME.loc[imagenet_ids]['name'].tolist()
+
+def get_maco_magnitudes(spectrum_shape: Tuple[int, int]=None) -> torch.Tensor:
+    """Retrieve the Fourier coefficient magnitudes used by MACO. They extracted
+    these magnitudes by averaging over the ImageNet-1k dataset magnitudes.
+
+    Args:
+        shape (Tuple[int, int]): the shape of the spectrum 
+    
+    Returns:
+        torch.Tensor: The MACO/ImageNet-1k Fourier coefficient magnitudes of shape 224x113
+    """
+    if not os.path.isfile(MACO_MAGNITUDES_PATH):
+        print("Downloading MACO magnitudes")
+        download_url(MACO_MAGNITUDES_URL, root=os.path.dirname(MACO_MAGNITUDES_PATH),
+                     filename=os.path.basename(MACO_MAGNITUDES_PATH))
+        
+    magnitudes = torch.tensor(np.load(MACO_MAGNITUDES_PATH), dtype=torch.float32)
+    return magnitudes if spectrum_shape is None else F.interpolate(magnitudes.unsqueeze(0), 
+                                                                   size=spectrum_shape, mode='bilinear',
+                                                                   align_corners=False, antialias=True)[0]
