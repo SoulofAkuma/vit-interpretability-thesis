@@ -12,6 +12,8 @@
 #SBATCH --mail-user=allertmika@gmail.com
 #SBATCH --mail-type=NONE
 
+eval "$(conda shell.bash hook)"
+
 conda init
 conda activate /scratch/vihps/vihps01/vit-interpretability-thesis/env
 
