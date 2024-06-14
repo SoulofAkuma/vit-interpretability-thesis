@@ -80,6 +80,7 @@ class MixedPredictiveImagesDataset(IndexDataset):
         return [self[index] for index in range(cls_ind, self.length, 1000)]
 
     def __len__(self):
+        return 1000
         return self.length
     
     def __getitem__(self, index) -> ItemT:

@@ -1,14 +1,18 @@
+import numpy as np
 import timm
 from src.datasets import MixedPredictiveImages, MostPredictiveImages, MostPredictiveImagesByBlock
 import torch
 import tqdm
-from src.utils.transformation import transform_images
+from src.utils.transformation import transform_images, get_transforms
+from src.utils.IndexDataset import IndexDataset
+from timm.models.vision_transformer import VisionTransformer
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import List, Dict, Union
+from typing import List, Dict, Optional, Tuple, Union
 import sqlite3
 import os
 from itertools import product
+from torch.utils.data import DataLoader
 
 MOBILE_NET = None
 VGG_16 = None
@@ -20,12 +24,28 @@ DENSENET = None
 def transferability_score(dataset: Union[MixedPredictiveImages.MixedPredictiveImagesDataset,
                           MostPredictiveImages.MostPredictiveImagesDataset,
                           MostPredictiveImagesByBlock.MostPredictiveImagesByBlockDataset],
-                          huggingface_model_descriptor: str,
                           result_path: str,
                           batch_size: int=10,
                           show_progression: bool=True,
-                          device=None):
+                          k: int=5,
+                          device=None) -> Dict[Tuple[str, str, int, Tuple[str, str]], float]:
+    """Calculate the trans
 
+    Args:
+        dataset (Union[MixedPredictiveImages.MixedPredictiveImagesDataset,MostPredictiveImages.MostPredictiveImagesDataset,MostPredictiveImagesByBlock.MostPredictiveImagesByBlockDataset]): _description_
+        huggingface_model_descriptor (str): _description_
+        result_path (str): _description_
+        batch_size (int, optional): _description_. Defaults to 10.
+        show_progression (bool, optional): _description_. Defaults to True.
+        k (int, optional): _description_. Defaults to 5.
+        device (_type_, optional): _description_. Defaults to None.
+
+    Raises:
+        NameError: If the file already exists
+
+    Returns:
+        _type_: _description_
+    """    """"""
     global MOBILE_NET, VGG_16, XCEPTION, EFFICIENT_NET, TINY_CONVNEXT, DENSENET
 
     device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -50,9 +70,15 @@ def transferability_score(dataset: Union[MixedPredictiveImages.MixedPredictiveIm
         models[i] = models[i].to(device)
         models[i].eval()
 
-    loop = range(0, len(dataset), batch_size)
-    if show_progression:
-        loop = tqdm.tqdm(loop)
+    loader = DataLoader(dataset, batch_size, shuffle=False, num_workers=10)
+    common_transform = get_transforms(MOBILE_NET)
+    xception_transform = get_transforms(XCEPTION)
+
+    transforms_cache = dataset.transforms
+    dataset.transforms = {
+        'common': common_transform,
+        'xception': xception_transform
+    }
 
     if os.path.exists(result_path):
         raise NameError('The result ' + result_path + ' already exists')
@@ -60,9 +86,11 @@ def transferability_score(dataset: Union[MixedPredictiveImages.MixedPredictiveIm
     connection = sqlite3.connect(result_path)
     cursor = connection.cursor()
     correct_logits = None
+    
+    predictions = [f"prediction{i}" for i in range(k)]
 
     if type(dataset) is MixedPredictiveImages.MixedPredictiveImagesDataset:
-        connection.execute("""
+        connection.execute(f"""
             CREATE TABLE predictions (
                 pred_model TEXT,
                 gen_model TEXT,
@@ -73,7 +101,8 @@ def transferability_score(dataset: Union[MixedPredictiveImages.MixedPredictiveIm
                 top TEXT,
                 weighting TEXT,
                 gen_type TEXT,
-                prediction INTEGER
+                prediction INTEGER{"," if len(predictions) > 1 else ""}
+                {",".join([f"{prediction} INTEGER" for prediction in predictions])}
             )
         """)
 
@@ -88,33 +117,40 @@ def transferability_score(dataset: Union[MixedPredictiveImages.MixedPredictiveIm
             for k in product(dataset.models, gen_types, dataset.iterations, dataset.weight_top_combs)
         }
 
-    for i in loop:
-        range_size = min(batch_size, len(dataset) - i)
-        items = [dataset[ii] for ii in range(i, i+range_size)]
-        tensor_imgs = torch.concat(transform_images([items[ii]['img'] for ii in range(len(items))], 
-                                                    huggingface_model_descriptor, device), dim=0)
+    for i, items in enumerate(tqdm.tqdm(loader, disable=not show_progression)):
         
-        correct_logits = [items[ii]['num_idx'] for ii in range(len(items))]
+        items_len = len(items['imagenet_id'])
 
+        common_tensor_imgs = items['img_common'].to(device)
+        xception_tensor_imgs = items['img_xception'].to(device)
+        
         for model_name, model in models.items():
 
-            predicted_logits = model(tensor_imgs).argmax(dim=1).tolist()
+            _, predicted_logits = model(xception_tensor_imgs if model_name == 'xception'
+                                        else common_tensor_imgs).topk(k+1, dim=1)
 
             if type(dataset) is MixedPredictiveImages.MixedPredictiveImagesDataset:
                 rows = []
-                for i, item in enumerate(items):
-                    key = (item['model'], item['gen_type'], item['iteration'], 
-                           (item['top'], item['weighting_scheme']))
-                    correct_predictions[key] += correct_logits[i]==predicted_logits[0]
+                for ii in range(items_len):
+                    key = (items['model'][ii], items['gen_type'][ii], items['iteration'][ii].item(), 
+                           (items['top'][ii], items['weighting_scheme'][ii]))
+                    correct_predictions[key] += (
+                        items['num_idx'][ii].item()==predicted_logits[ii,0].item())
                     total_predictions[key] += 1
-                    rows.append((model_name, item['model'], item['imagenet_id'], item['num_idx'],
-                                 item['name'], item['iteration'], item['top'], item['weighting_scheme'],
-                                 item['gen_type'], predicted_logits[i]))
+                    rows.append((model_name, items['model'][ii], items['imagenet_id'][ii], 
+                                 items['num_idx'][ii].item(), items['name'][ii], 
+                                 items['iteration'][ii].item(), items['top'][ii], items['weighting_scheme'][ii], items['gen_type'][ii], 
+                                 predicted_logits[ii, 0].item(), 
+                                 *[predicted_logits[ii, iii].item() for iii in range(k)]))
 
-                cursor.executemany("""
+                cursor.executemany(f"""
                         INSERT INTO predictions (pred_model, gen_model, imagenet_id, num_idx, name,
-                            iteration, top, weighting, gen_type, prediction) VALUES 
-                        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            iteration, top, weighting, gen_type, prediction
+                            {"," if k > 0 else ""}
+                            {", ".join(predictions)}) VALUES 
+                        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                         {"," if k > 0 else ""}
+                         {", ".join(["?" for _ in range(k)])})
                     """, rows
                 )
 
@@ -122,8 +158,37 @@ def transferability_score(dataset: Union[MixedPredictiveImages.MixedPredictiveIm
     
     cursor.close()
     connection.close()
+    dataset.transforms = transforms_cache
 
     return {
         k: (correct_predictions[k] / total_predictions[k]) if total_predictions[k] > 0 else 'No Predictions'
         for k in product(dataset.models, gen_types, dataset.iterations, dataset.weight_top_combs)
     }
+
+def prepare_plausibility(model: VisionTransformer, dataset: IndexDataset, mmap_path: str,
+                         huggingface_model_descriptor: str, batch_size: int=10, device: Optional[str]=None):
+    """Prepare the calculation of plausibility score calculation by storing the feature embeddings
+    of all elements in the dataset on disk
+
+    Args:
+        model (VisionTransformer): The vision transformer to get the feature embedding from 
+        dataset (IndexDataset): The dataset to run through the ViT
+        mmap_path (str): The path to store the result under
+        huggingface_model_descriptor (str): The huggingface descriptor for the transformation pipeline.
+        batch_size (int, optional): The batch size to load data with. Defaults to 10.
+        device (str, optional): The device to run the model on. Defaults to None.
+    """
+
+    device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    model = model.eval().to(device)
+
+    loader = DataLoader(dataset, batch_size, shuffle=False, num_workers=10)
+
+    feature_mmap = np.memmap(mmap_path, dtype=float, mode='w+', shape=len(loader.dataset, model.embed_dim))
+
+    for i, items in enumerate(tqdm.tqdm(loader)):
+        
+        tensor_imgs = transform_images([items[ii]['img'] for ii in range(len(items))], 
+                                       huggingface_model_descriptor, device, concat=True)
+        

@@ -203,7 +203,9 @@ def maco_optimizer_generator(learning_rate: float=1.0) -> \
 
 @wrap_objective()
 def key_neuron_objective(block: int, column: int, batch: int=None, before_nonlinear: bool=True, 
-                         token_boundaries: Tuple[Optional[int], Optional[int]]=(None, None)):
+                         token_boundaries: Tuple[Optional[int], Optional[int]]=(None, None),
+                         use_cosine_similarity: bool=False) \
+                            -> Callable[[Callable[[str], torch.Tensor]], torch.Tensor]:
     """Get a lucent and maco compatible objective to optimize towards the
     value of a key vector. Ideally you pass the row index of a 
     value vector that most predicts a class here, to optimize via the
@@ -220,13 +222,16 @@ def key_neuron_objective(block: int, column: int, batch: int=None, before_nonlin
         meaningful results that are of a good quality. Defaults to True.
         token_boundaries (Tuple[int, int], optional): The range of tokens to consider. Defaults to
         (None, None), meaning all tokens.
+        use_cosine_similarity (bool, optional): True if the cosine similarity between 
 
     Returns:
-        Callable: A lucent compatible objective to maximize a transformer neuron activation
+        Callable[[Callable[[str], torch.Tensor]], torch.Tensor]: A lucent compatible objective to \
+            maximize a transformer neuron activation
     """
     layer_descriptor = f"blocks_{block}_mlp_{'fc1' if before_nonlinear else 'act'}"
     def inner(model):
         layer = model(layer_descriptor)
+        
         return -layer[:, token_boundaries[0]:token_boundaries[1], column].mean()
     return inner
 

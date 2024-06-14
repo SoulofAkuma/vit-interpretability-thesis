@@ -33,7 +33,7 @@ def generate_images(model_name, image_size, model_img_size, thresholds, classes,
                             preprocess=False, show_image=False, show_inline=False,
                             fixed_image_size=model_img_size, device=device, 
                             post_grad_f=post_grad_f, skip_size_transform=True,
-                            images_as_tensor=True, progress=False)
+                            images_as_tensor=True, progress=True)
             alpha = alpha_retriever()
 
             print(f'Generated {img_name} for {cls}')

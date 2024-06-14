@@ -14,10 +14,8 @@ os.makedirs(CONFIG_PATH, exist_ok=True)
 os.makedirs(RESULTS_PATH, exist_ok=True)
 os.makedirs(RESULT_STATS_PATH, exist_ok=True)
 
-# job_index = os.environ['SLURM_PROCID']
-# node_name = os.environ['SLURMD_NODENAME']
-job_index = 0
-node_name = ''
+job_index = os.environ['SLURM_PROCID']
+node_name = os.environ['SLURMD_NODENAME']
 
 os.environ['MIOPEN_USER_DB_PATH'] = f'/scratch/vihps/vihps01/.config/miopen_{job_index}/'
 
