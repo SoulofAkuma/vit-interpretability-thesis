@@ -41,6 +41,17 @@ def get_categories(max_nr: Optional[int] = None, seed: Optional[int] = None) -> 
     return MAPPING_FRAME.index.tolist() if max_nr is None else \
         MAPPING_FRAME.sample(max_nr, random_state=seed, replace=False).index.tolist()
     
+def get_name_for_index(index: int) -> str:
+    """Get the readable name of an ImageNet class corresponding to the given index.
+
+    Args:
+        index (int): The index to get the name for.
+
+    Returns:
+        str: The name of the class the index belongs to.
+    """
+    return MAPPING_FRAME.iloc[index]['name']
+
 def get_index_for_imagenet_id(imagenet_id: str) -> int:
     """Get the numerical index for a given imagenet id
 

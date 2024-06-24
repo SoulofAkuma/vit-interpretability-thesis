@@ -1,21 +1,47 @@
 import torch
-from typing import List, Union
+from typing import List, Optional, Union
 from timm.models.vision_transformer import VisionTransformer
 from torchvision.models.feature_extraction import create_feature_extractor
 
 __KEY_VECTOR_EXTRACTORS = {}
 
-def extract_value_vectors(vit: VisionTransformer, device=None, with_bias=False) -> List[torch.Tensor]:
+def extract_value_vectors(vit: VisionTransformer, device: Optional[str]=None, with_bias: bool=False, 
+                          value_weight_with_bias: float=1.0, stack: bool=False) -> List[torch.Tensor]:
     """Extract the value vectors of the MLP heads of a vision transformer by block
 
     Args:
         vit (nn.Module): A vision transformer
+        device (str, optional): The device to move the result to. Defaults to None.
+        with_bias (bool, optional): Whether to add the value bias to each projected value vector. Defaults to False.
+        value_weight_with_bias (float, optional): The weight for the value vector, when adding the bias to it. Defaults to 1.0.
     Returns:
         List[torch.Tensor]: A list of value vector matrices for each block
     """
-    result = [block.mlp.fc2.weight.detach().T + (block.mlp.fc2.bias.detach() if with_bias else 0) 
-              for block in vit.blocks]
-    return result if device is None else [t.to(device) for t in result]
+    result = [block.mlp.fc2.weight.detach().T for block in vit.blocks]
+    if with_bias:
+        result = [value_weight_with_bias * result[i] + block.mlp.fc2.bias.detach() 
+                  for i, block in enumerate(vit.blocks)]
+        
+    result = result if device is None else [t.to(device) for t in result]
+
+    return torch.stack(result, dim=0) if stack else result
+
+def extract_value_biases(vit: VisionTransformer, device: Optional[str]=None,
+                         stack: bool=False) -> Union[List[torch.Tensor], torch.Tensor]:
+    """Extract the biases of all MLP value vector matrices in the ViT.
+
+    Args:
+        vit (VisionTransformer): The ViT to extract from
+        device (Optional[str], optional): The device to move the biases to. Defaults to None.
+        concat (bool, optional): Whether to concat the biases into one tensor. Defaults to False.
+
+    Returns:
+        Union[List[torch.Tensor], torch.Tensor]: A list of biases or the biases concatenated as one tensor.
+    """
+    result = [block.mlp.fc2.bias.detach() for block in vit.blocks]
+    result = result if device is None else [bias.to(device) for bias in result]
+    return torch.stack(result, dim=0) if stack else result
+
 
 def extract_mhsa_proj_vectors(vit: VisionTransformer, device=None) -> List[torch.Tensor]:
     """Extract the projection vectors of the MHSA blocks of a vision transformer by block

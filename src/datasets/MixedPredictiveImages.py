@@ -3,7 +3,7 @@ import os
 
 import pandas as pd
 from PIL import Image
-from typing import Dict, Literal, Set, Union, List, Tuple, TypedDict
+from typing import Dict, Literal, Optional, Set, Union, List, Tuple, TypedDict
 from src.utils.imagenet import MAPPING_FRAME
 from itertools import product
 from torchvision.transforms.functional import pil_to_tensor
@@ -26,18 +26,18 @@ tops_T = Literal[
 ]
 weighting_scheme_T = Literal['unweighted', 'softmax']
 
-default_models = {
-    'vit_base_patch16_224',
-    'vit_base_patch32_224',
+default_models = [
+    'vit_base_patch16_224_miil',
     'vit_large_patch16_224',
-    'vit_base_patch16_224_miil'
-}
-default_tops = {
-    '1',
+    'vit_base_patch32_224',
+    'vit_base_patch16_224',
+]
+default_tops = [
     '1,2',
+    '1,2,3,4',
     '1,2,3',
-    '1,2,3,4'
-}
+    '1',
+]
 
 class ItemT(TypedDict):
     imagenet_id: str
@@ -67,23 +67,35 @@ class MixedPredictiveImagesDataset(IndexDataset):
         
         self.weight_top_combs: List[Tuple[tops_T, weighting_scheme_T]] = [
             tuple(comb) 
-            for comb in product(list(tops - {'1'}), 
+            for comb in product(list(filter(lambda x: x!='1', tops)), 
                                 ['unweighted', 'softmax'] if weighting_scheme == 'all' else [weighting_scheme])
         ] + ([('1', 'unweighted')] if '1' in tops else [])
             
         self.type_factor = {'all': 4, 'div': 3, 'clear': 1}[self.gen_type]
         self.length = len(MAPPING_FRAME.index) * self.type_factor * len(iterations) * len(models) \
             * len(self.weight_top_combs)
+        self.single_cat_length = self.type_factor * len(iterations) * len(models) \
+            * len(self.weight_top_combs)
+        self.locked_category = None
 
     def get_images_from_imgnet_id(self, imagenet_id: str):
         cls_ind = MAPPING_FRAME.loc[imagenet_id]['num_idx']
         return [self[index] for index in range(cls_ind, self.length, 1000)]
 
     def __len__(self):
-        return self.length
+        if self.locked_category is not None:
+            return self.single_cat_length
+        else:
+            return self.length
+    
+    def lock_category(self, imagenet_id: Optional[str]=None):
+        self.locked_category = imagenet_id
     
     def __getitem__(self, index) -> ItemT:
         item = super().__getitem__(index)
+        if self.locked_category:
+            index = index * 1000 + MAPPING_FRAME.loc[self.locked_category]['num_idx']
+
         cls_ind = index % len(MAPPING_FRAME.index)
         cls = MAPPING_FRAME.iloc[cls_ind]
         

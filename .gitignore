@@ -13,3 +13,6 @@ configs-by-block/*
 images-by-block/*
 configs-mixed-neurons-maco/*
 images-mixed-neurons-maco/*
+notebooks/*.db
+figures/*
+fix_fuckups.py

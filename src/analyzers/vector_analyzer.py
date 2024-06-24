@@ -1,5 +1,7 @@
 import torch
-from typing import List, Union
+from typing import Dict, List, Optional, Set, Tuple, Union
+
+from src.utils.imagenet import get_name_for_index
 
 def most_predictive_vec_for_classes(values: Union[torch.Tensor, List[torch.Tensor]], 
                                     projected_values: Union[torch.Tensor, List[torch.Tensor]], 
@@ -89,18 +91,46 @@ def k_most_predictive_ind_for_classes(projected_values: Union[torch.Tensor, List
     return result if device is None else result.to(device)
 
 def most_predictive_ind_for_classes_by_block(projected_values: Union[torch.Tensor, List[torch.Tensor]], 
-                                             device=None) -> torch.Tensor:
-    """_summary_
+                                             device: Optional[str]=None) -> torch.Tensor:
+    """Get the row indices of the most predictive index for every class by block
 
     Args:
-        values (Union[torch.Tensor, List[torch.Tensor]]): _description_
-        projected_values (Union[torch.Tensor, List[torch.Tensor]]): _description_
-        device (_type_, optional): _description_. Defaults to None.
+        projected_values (Union[torch.Tensor, List[torch.Tensor]]): The value vectors projected into the
+            class embedding space 
+        device (Optional[str], optional): The device to move the indices to. Defaults to None.
     """
     if type(projected_values) is list:
         projected_values = torch.stack(projected_values, dim=0)
 
-    _, _, classes = projected_values.shape
     _, best_repr_in_value = projected_values.max(1)
 
     return best_repr_in_value if device is None else best_repr_in_value.to(device)
+
+def k_most_predictive_ind_for_classes_by_block(projected_values: Union[torch.Tensor, List[torch.Tensor]], 
+                                               k: int, device: Optional[str]=None) -> torch.Tensor:
+    if type(projected_values) is list:
+        projected_values = torch.stack(projected_values, dim=0)
+
+    _, best_repr_in_value = projected_values.topk(k, dim=1)
+
+    return best_repr_in_value if device is None else best_repr_in_value.to(device)
+
+def shared_value_vectors(k_most_predictive_ind_for_classes: torch.Tensor,
+                         cls_as_name: bool=False) -> Dict[Tuple[int, int], Set[Tuple[Union[str, int], int]]]:
+
+    K, _, C = k_most_predictive_ind_for_classes.shape
+
+    cls_names = [get_name_for_index(i) for i in range(C) if i < 1000]
+
+    usages_by_index = {}
+
+    for k in range(K):
+        for c in range(C):
+            index = tuple(k_most_predictive_ind_for_classes[k, :, c].tolist())
+            name = cls_names[c]
+
+            usages_by_index.setdefault(index, set())
+            
+            usages_by_index[index].add((name if cls_as_name else c, k))
+
+    return usages_by_index
