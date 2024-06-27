@@ -10,8 +10,8 @@ from typing import Dict, List, Tuple
 import torch.nn.functional as F
 
 MODELS = [
-    # 'vit_base_patch16_224',
-    # 'vit_base_patch32_224',
+    'vit_base_patch16_224',
+    'vit_base_patch32_224',
     'vit_large_patch16_224',
     'vit_base_patch16_224_miil'
 ]

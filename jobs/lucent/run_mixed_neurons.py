@@ -7,7 +7,7 @@ import time
 
 job_index = os.environ['SLURM_PROCID']
 node_name = os.environ['SLURMD_NODENAME']
-job_id = os.eviron['SLURM_JOB_ID']
+job_id = os.environ['SLURM_JOB_ID']
 
 CONFIG_PATH = '/scratch/vihps/vihps01/vit-interpretability-thesis/configs-mixed-neurons-multi'
 RESULTS_PATH = '/scratch/vihps/vihps01/vit-interpretability-thesis/images-mixed-neurons_' + str(job_id)

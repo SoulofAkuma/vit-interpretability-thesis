@@ -807,7 +807,7 @@ def fid_score(datasets: List[Union[MixedPredictiveImages.MixedPredictiveImagesDa
     """Compute the fid scores after having precomputed the imagenet component of the score.
 
     Args:
-        dataset (Union[MixedPredictiveImages.MixedPredictiveImagesDataset, MostPredictiveImages.MostPredictiveImagesDataset, MostPredictiveImagesByBlock.MostPredictiveImagesByBlockDataset, MixedPredictiveImagesMacoDataset]): The dataset to compute the FID score on for every imagenet category
+        datasets (Union[MixedPredictiveImages.MixedPredictiveImagesDataset, MostPredictiveImages.MostPredictiveImagesDataset, MostPredictiveImagesByBlock.MostPredictiveImagesByBlockDataset, MixedPredictiveImagesMacoDataset]): The dataset to compute the FID score on for every imagenet category
         results_path (str): The directory the precomputed imagenet means and covariances are placed.
         device (Optional[str], optional): The device to run inference on. Defaults to None.
         batch_size (int, optional): The batch size to run inference with. Defaults to 10.
@@ -844,6 +844,8 @@ def fid_score(datasets: List[Union[MixedPredictiveImages.MixedPredictiveImagesDa
 
         cov_imgnet = torch.load(os.path.join(dir, 'cov.pt'))
         mean_imgnet = torch.load(os.path.join(dir, 'mean.pt'))
+
+        # return cov_imgnet
 
         [dataset.lock_category(category) for dataset in datasets]
         embeddings = torch.empty(sum([len(dataset) for dataset in datasets]), 2048).cpu()
@@ -906,6 +908,8 @@ def fid_score(datasets: List[Union[MixedPredictiveImages.MixedPredictiveImagesDa
             #     raise ValueError(f'Imaginary component too large {np.max(np.abs(variances.imag))}')
             variances = variances.real
 
+        print(torch.trace(cov).item(), torch.trace(cov_imgnet).item(), np.trace(variances), torch.sum(cov).item(), torch.sum(cov_imgnet).item())
+
         scores[category] = mean_diff.dot(mean_diff).item() + torch.trace(cov).item() + \
             torch.trace(cov_imgnet).item() - 2 * np.trace(variances)
         
@@ -918,6 +922,113 @@ def fid_score(datasets: List[Union[MixedPredictiveImages.MixedPredictiveImagesDa
             json.dump(scores, f)
 
     return scores
+
+# def fid_score_cov_baseline(datasets: List[Union[MixedPredictiveImages.MixedPredictiveImagesDataset,
+#                            MostPredictiveImages.MostPredictiveImagesDataset,
+#                            MostPredictiveImagesByBlock.MostPredictiveImagesByBlockDataset,
+#                            MixedPredictiveImagesMacoDataset,
+#                            ImagesByBlockDataset]], results_path: str, device: Optional[str]=None,
+#                            batch_size: int=3, show_progression: bool=True,
+#                            store_path: Optional[str]=None):
+#     """Compute the fid score after having precomputed the imagenet component of the score.
+
+#     Args:
+#         datasets (Union[MixedPredictiveImages.MixedPredictiveImagesDataset, MostPredictiveImages.MostPredictiveImagesDataset, MostPredictiveImagesByBlock.MostPredictiveImagesByBlockDataset, MixedPredictiveImagesMacoDataset]): The dataset to compute the FID score on for every imagenet category
+#         results_path (str): The directory the precomputed imagenet means and covariances are placed.
+#         device (Optional[str], optional): The device to run inference on. Defaults to None.
+#         batch_size (int, optional): The batch size to run inference with. Defaults to 10.
+#         show_progression (bool, optional): True if tqdm progression should be shown. Defaults to True.
+#         store_path (Optional[str], optional): The path to store the result under in json format. Defaults to None.
+
+#     Raises:
+#         FileNotFoundError: If the directory of the precomputations or the precomputations do not exist.
+#         ValueError: If the multiplied covariance matrix root contains large imaginary components.
+#     """
+
+#     if type(datasets) is not list:
+#         datasets = [datasets]
+
+#     device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+#     model: timm.models.InceptionV3 = timm.create_model('inception_v3', pretrained=True).eval().to(device)
+#     transforms = get_transforms(model)
+
+#     tf_caches = [dataset.transforms for dataset in datasets]
+#     for dataset in datasets:
+#         dataset.transforms = transforms
+
+#     scores = {}
+
+#     if not os.path.isdir(results_path):
+#         raise FileNotFoundError(f'The folder {results_path} does not exist')
+
+#     for category in tqdm(dataset.get_imagenet_classes(), desc='Categories', disable=not show_progression):
+        
+#         dir = os.path.join(results_path, category)
+
+#         cov_imgnet = torch.load(os.path.join(dir, 'cov.pt'))
+#         mean_imgnet = torch.load(os.path.join(dir, 'mean.pt'))
+
+#         # return cov_imgnet
+
+#         [dataset.lock_category(category) for dataset in datasets]
+#         embeddings = torch.empty(sum([len(dataset) for dataset in datasets]), 2048).cpu()
+
+#         acc_ds_lengths = []
+#         for i, dataset in enumerate(datasets):
+#             if i == 0:
+#                 acc_ds_lengths.append(0)
+#             else:
+#                 acc_ds_lengths.append(acc_ds_lengths[i-1] + len(datasets[i-1]))
+
+#         # for i, items in tqdm(enumerate(loader), desc=f'Dataset Images {category}', leave=False, 
+#         #               disable=True, position=-1):
+            
+#         #     tensor_images = items['img'].to(device)
+
+#         #     result = model.global_pool(model.forward_features(tensor_images))
+#         #     embeddings[i:i+length] = result.detach().cpu()
+
+#         #     for item in items:
+#         #         del item['img']
+#         #     del tensor_images
+#         #     torch.cuda.empty_cache()
+#         for ds_i, dataset in enumerate(datasets):
+#             for i in tqdm(range(0, len(dataset), batch_size), 
+#                           desc=f'Dataset {ds_i} Images {category}', 
+#                           leave=False, disable=True, position=-1):
+
+#                 length = min(len(dataset)-i, batch_size)
+#                 items = [dataset[ii+i] for ii in range(length)]
+
+#                 tensor_images = torch.stack([items[ii]['img'] for ii in range(length)], dim=0).to(device)
+
+#                 result = model.global_pool(model.forward_features(tensor_images))
+#                 embeddings[i+acc_ds_lengths[ds_i]:i+acc_ds_lengths[ds_i]+length] = (
+#                     result.detach().cpu())
+
+#                 for item in items:
+#                     del item['img']
+#                 del tensor_images
+#                 torch.cuda.empty_cache()
+
+#         mean = torch.mean(embeddings, dim=0)
+
+#         epsilon = 1e-6
+
+#         mean_diff = mean - mean_imgnet
+
+#         scores[category] = mean_diff.dot(mean_diff).item()
+        
+#     for i, dataset in enumerate(datasets):
+#         dataset.transforms = tf_caches[i]
+#         dataset.lock_category()
+
+#     if store_path is not None:
+#         with open(store_path, 'x') as f:
+#             json.dump(scores, f)
+
+#     return scores
 
 # from https://github.com/pytorch/pytorch/issues/25481
 def torch_sqrtm(matrix):

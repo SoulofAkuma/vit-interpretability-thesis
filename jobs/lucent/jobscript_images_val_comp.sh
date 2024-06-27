@@ -18,4 +18,4 @@ conda init
 conda activate /scratch/vihps/vihps01/vit-interpretability-thesis/env
 
 export MIOPEN_USER_DB_PATH=/scratch/vihps/vihps01/.config/miopen_$SLURM_PROCID/
-srun python3 /scratch/vihps/vihps01/vit-interpretability-thesis/code/jobs/lucent/run_mixed_neurons.py
+srun python3 /scratch/vihps/vihps01/vit-interpretability-thesis/code/jobs/lucent/run_val_comp.py
