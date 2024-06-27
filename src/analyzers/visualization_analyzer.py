@@ -404,7 +404,7 @@ def plausibility_score(imagenet: ImageNetTrainDataset, result_paths: List[str],
 
     Args:
         model (VisionTransformer): The vision transformer to get the feature embedding from 
-        imagenet (ImageNetTrainDataset): The image net train dataset for the plausbility score computation.
+        imagenet (ImageNetTrainDataset): The image net train dataset for the plausibility score computation.
         result_path (str): The path to store the result db under.
         dataset (Union[MixedPredictiveImages.MixedPredictiveImagesDataset,
                  MostPredictiveImages.MostPredictiveImagesDataset,
@@ -525,7 +525,7 @@ def plausibility_score(imagenet: ImageNetTrainDataset, result_paths: List[str],
             })
             distance_counts.append({
                 k: 0
-                for k in product(dataset.models, gen_types, dataset.iterations)
+                for k in product(dataset.model_block_combs, gen_types, dataset.iterations)
             })
         else:
             print('Not implemented')
@@ -797,11 +797,11 @@ def fid_precompute_class_distr(dataset: Union[ImageNetTrainDataset,ImageNetValDa
     dataset.lock_category()
 
 # partially adapted from https://github.com/mseitzer/pytorch-fid/blob/master/src/pytorch_fid/fid_score.py
-def fid_score(dataset: Union[MixedPredictiveImages.MixedPredictiveImagesDataset,
+def fid_score(datasets: List[Union[MixedPredictiveImages.MixedPredictiveImagesDataset,
                 MostPredictiveImages.MostPredictiveImagesDataset,
                 MostPredictiveImagesByBlock.MostPredictiveImagesByBlockDataset,
                 MixedPredictiveImagesMacoDataset,
-                ImagesByBlockDataset], results_path: str, device: Optional[str]=None,
+                ImagesByBlockDataset]], results_path: str, device: Optional[str]=None,
                 batch_size: int=3, show_progression: bool=True,
                 store_path: Optional[str]=None):
     """Compute the fid scores after having precomputed the imagenet component of the score.
@@ -819,13 +819,17 @@ def fid_score(dataset: Union[MixedPredictiveImages.MixedPredictiveImagesDataset,
         ValueError: If the multiplied covariance matrix root contains large imaginary components.
     """
 
+    if type(datasets) is not list:
+        datasets = [datasets]
+
     device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     model: timm.models.InceptionV3 = timm.create_model('inception_v3', pretrained=True).eval().to(device)
     transforms = get_transforms(model)
 
-    tf_cache = dataset.transforms
-    dataset.transforms = transforms
+    tf_caches = [dataset.transforms for dataset in datasets]
+    for dataset in datasets:
+        dataset.transforms = transforms
 
     scores = {}
 
@@ -841,8 +845,15 @@ def fid_score(dataset: Union[MixedPredictiveImages.MixedPredictiveImagesDataset,
         cov_imgnet = torch.load(os.path.join(dir, 'cov.pt'))
         mean_imgnet = torch.load(os.path.join(dir, 'mean.pt'))
 
-        dataset.lock_category(category)
-        embeddings = torch.empty(len(dataset), 2048).cpu()
+        [dataset.lock_category(category) for dataset in datasets]
+        embeddings = torch.empty(sum([len(dataset) for dataset in datasets]), 2048).cpu()
+
+        acc_ds_lengths = []
+        for i, dataset in enumerate(datasets):
+            if i == 0:
+                acc_ds_lengths.append(0)
+            else:
+                acc_ds_lengths.append(acc_ds_lengths[i-1] + len(datasets[i-1]))
 
         # for i, items in tqdm(enumerate(loader), desc=f'Dataset Images {category}', leave=False, 
         #               disable=True, position=-1):
@@ -856,20 +867,24 @@ def fid_score(dataset: Union[MixedPredictiveImages.MixedPredictiveImagesDataset,
         #         del item['img']
         #     del tensor_images
         #     torch.cuda.empty_cache()
-        for i in tqdm(range(0, len(dataset), batch_size), desc=f'Dataset Images {category}', leave=False, disable=True, position=-1):
-            
-            length = min(len(dataset)-i, batch_size)
-            items = [dataset[ii+i] for ii in range(length)]
+        for ds_i, dataset in enumerate(datasets):
+            for i in tqdm(range(0, len(dataset), batch_size), 
+                          desc=f'Dataset {ds_i} Images {category}', 
+                          leave=False, disable=True, position=-1):
 
-            tensor_images = torch.stack([items[ii]['img'] for ii in range(length)], dim=0).to(device)
+                length = min(len(dataset)-i, batch_size)
+                items = [dataset[ii+i] for ii in range(length)]
 
-            result = model.global_pool(model.forward_features(tensor_images))
-            embeddings[i:i+length] = result.detach().cpu()
+                tensor_images = torch.stack([items[ii]['img'] for ii in range(length)], dim=0).to(device)
 
-            for item in items:
-                del item['img']
-            del tensor_images
-            torch.cuda.empty_cache()
+                result = model.global_pool(model.forward_features(tensor_images))
+                embeddings[i+acc_ds_lengths[ds_i]:i+acc_ds_lengths[ds_i]+length] = (
+                    result.detach().cpu())
+
+                for item in items:
+                    del item['img']
+                del tensor_images
+                torch.cuda.empty_cache()
 
         cov = torch.cov(embeddings.T)
         mean = torch.mean(embeddings, dim=0)
@@ -893,9 +908,10 @@ def fid_score(dataset: Union[MixedPredictiveImages.MixedPredictiveImagesDataset,
 
         scores[category] = mean_diff.dot(mean_diff).item() + torch.trace(cov).item() + \
             torch.trace(cov_imgnet).item() - 2 * np.trace(variances)
-            
-    dataset.transforms = tf_cache
-    dataset.lock_category()
+        
+    for i, dataset in enumerate(datasets):
+        dataset.transforms = tf_caches[i]
+        dataset.lock_category()
 
     if store_path is not None:
         with open(store_path, 'x') as f:

@@ -40,6 +40,14 @@ def get_categories(max_nr: Optional[int] = None, seed: Optional[int] = None) -> 
     """
     return MAPPING_FRAME.index.tolist() if max_nr is None else \
         MAPPING_FRAME.sample(max_nr, random_state=seed, replace=False).index.tolist()
+
+def get_all_classes() -> List[str]:
+    """Get all imagenet classes
+
+    Returns:
+        List[str]: The imagenet classes in order
+    """
+    return MAPPING_FRAME.index.tolist()
     
 def get_name_for_index(index: int) -> str:
     """Get the readable name of an ImageNet class corresponding to the given index.
@@ -73,6 +81,17 @@ def get_imagenet_id_for_names(names: List[str]) -> List[str]:
         List[str]: The list of imagenet ids
     """
     return [MAPPING_FRAME[MAPPING_FRAME['name']==name].index[0] for name in names]
+
+def get_imagenet_id_for_name(name: str) -> List[str]:
+    """Return the imagenet ids for a list of readable class names
+
+    Args:
+        names (List[str]): The list of readable names
+
+    Returns:
+        List[str]: The list of imagenet ids
+    """
+    return MAPPING_FRAME[MAPPING_FRAME['name']==name].index[0]
 
 def get_names_for_imagenet_ids(imagenet_ids: List[str]) -> List[str]:
     """Return the readable names for a list of imagenet ids

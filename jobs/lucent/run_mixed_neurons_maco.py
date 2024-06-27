@@ -5,8 +5,12 @@ from generate_images_mixed_neurons_maco import generate_images
 from PIL import Image
 import time
 
-CONFIG_PATH = '/scratch/vihps/vihps01/vit-interpretability-thesis/configs-mixed-neurons-maco'
-RESULTS_PATH = '/scratch/vihps/vihps01/vit-interpretability-thesis/images-mixed-neurons-maco'
+job_index = os.environ['SLURM_PROCID']
+node_name = os.environ['SLURMD_NODENAME']
+job_id = os.eviron['SLURM_JOB_ID']
+
+CONFIG_PATH = '/scratch/vihps/vihps01/vit-interpretability-thesis/configs-mixed-neurons-maco-multi'
+RESULTS_PATH = '/scratch/vihps/vihps01/vit-interpretability-thesis/images-mixed-neurons-maco_' + str(job_id)
 RESULT_STATS_PATH = '/scratch/vihps/vihps01/vit-interpretability-thesis/job-reports'
 # CONFIG_PATH = 'A:\\My Drive\\Unviersity\\Thesis\\repo\\configs-mixed-neurons-maco'
 # RESULTS_PATH = 'A:\\My Drive\\Unviersity\\Thesis\\repo\\images-mixed-neurons-maco'
@@ -17,8 +21,6 @@ os.makedirs(CONFIG_PATH, exist_ok=True)
 os.makedirs(RESULTS_PATH, exist_ok=True)
 os.makedirs(RESULT_STATS_PATH, exist_ok=True)
 
-job_index = os.environ['SLURM_PROCID']
-node_name = os.environ['SLURMD_NODENAME']
 # job_index = 0
 # node_name = ''
 

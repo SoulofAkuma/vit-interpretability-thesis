@@ -222,7 +222,8 @@ def key_neuron_objective(block: int, column: int, batch: int=None, before_nonlin
         meaningful results that are of a good quality. Defaults to True.
         token_boundaries (Tuple[int, int], optional): The range of tokens to consider. Defaults to
         (None, None), meaning all tokens.
-        use_cosine_similarity (bool, optional): True if the cosine similarity between 
+        use_cosine_similarity (bool, optional): True if the cosine similarity between. \
+            Not currently implemented
 
     Returns:
         Callable[[Callable[[str], torch.Tensor]], torch.Tensor]: A lucent compatible objective to \
@@ -235,7 +236,8 @@ def key_neuron_objective(block: int, column: int, batch: int=None, before_nonlin
         return -layer[:, token_boundaries[0]:token_boundaries[1], column].mean()
     return inner
 
-def generate_most_stimulative_for_imgnet_id(model: VisionTransformer, imagenet_id: str,
+def generate_most_stimulative_for_imgnet_id(model: VisionTransformer, 
+                                            imagenet_id: Union[str, List[str]],
                                             device: Optional[str]=None,
                                             most_predictive_inds: Optional[torch.Tensor]=None,
                                             iterations: Optional[List[int]]=None,
@@ -257,7 +259,8 @@ def generate_most_stimulative_for_imgnet_id(model: VisionTransformer, imagenet_i
 
     Args:
         model (VisionTransformer): The model to generate the image(s) for.
-        imagenet_id (str): The imagenet id of the class to generate the image(s) for
+        imagenet_id (Union[str, List[str]]): The imagenet id of the class to generate the \
+            image for. Optionally a list to generate for multiple classes at once
         device (str, optional): The device to execute calculations on. Defaults to None.
         most_predictive_inds (torch.Tensor, optional): The most predictive value vectors for each of the ImageNet-1k classes, if they have already been computed. Defaults to None.
         iterations (List[int], optional): The number of iterations at which you want to save the image. Should be in increasing order and the last element should be the number of iterations in total. Defaults to [500].
@@ -282,6 +285,9 @@ def generate_most_stimulative_for_imgnet_id(model: VisionTransformer, imagenet_i
         torch.Tensor: The optimized image.
     """
 
+    if type(imagenet_id) is not list:
+        imagenet_id = [imagenet_id]
+
     device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     iterations = iterations or [1000]
 
@@ -290,10 +296,23 @@ def generate_most_stimulative_for_imgnet_id(model: VisionTransformer, imagenet_i
         emb_values = embedding_projection(model, values, device)
         most_predictive_inds = most_predictive_ind_for_classes(emb_values, device)
 
-    block, ind, _ = most_predictive_inds[:,get_index_for_imagenet_id(imagenet_id)].tolist()
+    cls_indices = torch.tensor(list(map(get_index_for_imagenet_id, imagenet_id)))
+    mul = 1 / len(imagenet_id)
 
-    neuron_objective = key_neuron_objective(block, ind, before_nonlinear=keys_before_nonlinear,
-                                            token_boundaries=(0, 1) if optimize_cls_token_only else (None, None))
+    blocks, inds, _ = most_predictive_inds[:,cls_indices].tolist()
+
+    neuron_objective = key_neuron_objective(blocks[0], inds[0], 
+                                            before_nonlinear=keys_before_nonlinear,
+                                            token_boundaries=(0, 1) 
+                                            if optimize_cls_token_only else (None, None)) * -mul
+    
+    for i in range(1, len(imagenet_id)):
+        neuron_objective += mul * key_neuron_objective(blocks[i], inds[i],
+                                                       before_nonlinear=keys_before_nonlinear,
+                                                       token_boundaries=(0, 1)
+                                                       if optimize_cls_token_only else 
+                                                       (None, None))
+    
     # neuron_objective = class_objective(388)
 
     param_f = maco_lucent_param_f(img_size, image_value_range, device, phase_std_deviation)

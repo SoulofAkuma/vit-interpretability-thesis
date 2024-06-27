@@ -34,14 +34,13 @@ dataset_maco = MixedPredictiveImagesMacoDataset(
 dataset_mixed = MixedPredictiveImagesDataset(
     'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel')
 dataset_by_block = ImagesByBlockDataset(
-    'A:\\CVData\\project-images\\images-by-block-224-fc1\\images-by-block',
-    models=['vit_base_patch16_224', 'vit_base_patch32_224'])
+    'A:\\CVData\\project-images\\images-by-block-224-fc1')
     
 # print('Transferability maco')
 # transferability = transferability_score(
 #     dataset_maco,
 #     'A:\\CVData\\project-images\\images-mixed-1280-fc1-multimodel-maco\\transferability_with_gen.db', 
-#     k=10, device=device, include_gen_models=True, batch_size=5)
+#     k=10, device=device, include_gen_models=True, batch_size=3)
 
 # print('Plausibility maco and mixed')
 # plausibility = plausibility_score(
@@ -75,58 +74,58 @@ model_names = [
     'vit_base_patch32_224', 
     'vit_base_patch16_224', 
 ]
-models = {
-    model_name: timm.create_model(model_name, pretrained=True).eval().to(device)
-    for model_name in model_names
-}
-model_transforms = {
-    'miil': get_transforms(models['vit_base_patch16_224_miil']),
-    'vanilla': get_transforms(models['vit_base_patch16_224'])
-}
-transform_keys = {
-    model_name: 'miil' if model_name.find('miil') != -1 else 'vanilla'
-    for model_name in model_names 
-}
+# models = {
+#     model_name: timm.create_model(model_name, pretrained=True).eval().to(device)
+#     for model_name in model_names
+# }
+# model_transforms = {
+#     'miil': get_transforms(models['vit_base_patch16_224_miil']),
+#     'vanilla': get_transforms(models['vit_base_patch16_224'])
+# }
+# transform_keys = {
+#     model_name: 'miil' if model_name.find('miil') != -1 else 'vanilla'
+#     for model_name in model_names 
+# }
 
 random_images = np.tile(np.arange(0, 50, 1, dtype=np.uint8), (1000, 1))
 random_images = np.random.default_rng().permuted(random_images, axis=1)
 random_images = random_images[:,:5]
 
-k_most_pred_by_model = {
-    model_name: k_most_predictive_ind_for_classes(
-        embedding_projection(models[model_name], extract_value_vectors(models[model_name], device), device),
-        10, device)
-    for model_name in model_names
-}
+# k_most_pred_by_model = {
+#     model_name: k_most_predictive_ind_for_classes(
+#         embedding_projection(models[model_name], extract_value_vectors(models[model_name], device), device),
+#         10, device)
+#     for model_name in model_names
+# }
 
-mlp_fc2_biases = {
-    model_name: [models[model_name].blocks[i].mlp.fc2.bias.detach() 
-                 for i in range(len(models[model_name].blocks))]
-    for model_name in model_names
-}
-mlp_fc2_biases_l2 = {
-    model_name: [(mlp_fc2_biases[model_name][i] ** 2).sum().sqrt().item() 
-                 for i in range(len(mlp_fc2_biases[model_name]))]
-    for model_name in model_names
-}
-mlp_fc2_weights = {
-    model_name: [models[model_name].blocks[i].mlp.fc2.weight.T.detach()
-                 for i in range(len(models[model_name].blocks))]
-    for model_name in model_names
-}
-model_heads = {
-    model_name: models[model_name].head.eval()
-    for model_name in model_names
-}
-model_norms = {
-    model_name: models[model_name].norm.eval()
-    for model_name in model_names
-}
-mlp_fc2_biases_pred = {
-    model_name: [model_heads[model_name](model_norms[model_name](bias)) 
-                 for bias in mlp_fc2_biases[model_name]]
-    for model_name in model_names
-}
+# mlp_fc2_biases = {
+#     model_name: [models[model_name].blocks[i].mlp.fc2.bias.detach() 
+#                  for i in range(len(models[model_name].blocks))]
+#     for model_name in model_names
+# }
+# mlp_fc2_biases_l2 = {
+#     model_name: [(mlp_fc2_biases[model_name][i] ** 2).sum().sqrt().item() 
+#                  for i in range(len(mlp_fc2_biases[model_name]))]
+#     for model_name in model_names
+# }
+# mlp_fc2_weights = {
+#     model_name: [models[model_name].blocks[i].mlp.fc2.weight.T.detach()
+#                  for i in range(len(models[model_name].blocks))]
+#     for model_name in model_names
+# }
+# model_heads = {
+#     model_name: models[model_name].head.eval()
+#     for model_name in model_names
+# }
+# model_norms = {
+#     model_name: models[model_name].norm.eval()
+#     for model_name in model_names
+# }
+# mlp_fc2_biases_pred = {
+#     model_name: [model_heads[model_name](model_norms[model_name](bias)) 
+#                  for bias in mlp_fc2_biases[model_name]]
+#     for model_name in model_names
+# }
 
 sqlite3.register_adapter(np.int64, int)
 sqlite3.register_adapter(np.int32, int)
@@ -504,47 +503,133 @@ cls_token_after_most_predictive_pred = 'A:\\CVData\\ImageNet\\val_cls_token_afte
 # create_pred_db(path, results_path, bias_pl_resid_path, bias_pl_vec_noise_path, bias_pl_all_path,
 #                cls_token_before_most_predictive_pred, cls_token_after_most_predictive_pred)
 
-dataset_top1_clear = MixedPredictiveImagesDataset(
-    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1'}, gen_types='clear')
-dataset_top12_uw_clear = MixedPredictiveImagesDataset(
-    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2'}, gen_types='clear', weighting_scheme='unweighted')
-dataset_top12_sm_clear = MixedPredictiveImagesDataset(
-    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2'}, gen_types='clear', weighting_scheme='softmax')
-dataset_top123_uw_clear = MixedPredictiveImagesDataset(
-    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2,3'}, gen_types='clear', weighting_scheme='unweighted')
-dataset_top123_sm_clear = MixedPredictiveImagesDataset(
-    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2,3'}, gen_types='clear', weighting_scheme='softmax')
-dataset_top1234_uw_clear = MixedPredictiveImagesDataset(
-    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2,3,4'}, gen_types='clear',
-    weighting_scheme='unweighted'
-)
-dataset_top1234_sm_clear = MixedPredictiveImagesDataset(
-    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2,3,4'}, gen_types='clear',
-    weighting_scheme='softmax'
-)
-dataset_top1_div = MixedPredictiveImagesDataset(
-    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1'}, gen_types='div')
-dataset_top12_uw_div = MixedPredictiveImagesDataset(
-    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2'}, gen_types='div', weighting_scheme='unweighted')
-dataset_top12_sm_div = MixedPredictiveImagesDataset(
-    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2'}, gen_types='div', weighting_scheme='softmax')
-dataset_top123_uw_div = MixedPredictiveImagesDataset(
-    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2,3'}, gen_types='div', weighting_scheme='unweighted')
-dataset_top123_sm_div = MixedPredictiveImagesDataset(
-    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2,3'}, gen_types='div', weighting_scheme='softmax')
-dataset_top1234_uw_div = MixedPredictiveImagesDataset(
-    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2,3,4'}, gen_types='div',
-    weighting_scheme='unweighted'
-)
-dataset_top1234_sm_div = MixedPredictiveImagesDataset(
-    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2,3,4'}, gen_types='div',
-    weighting_scheme='softmax'
-)
+dataset_top1_clear_base = MixedPredictiveImagesDataset(
+    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1'}, gen_types='clear',
+    models={'vit_base_patch16_224'})
+dataset_top1_clear_basemiil = MixedPredictiveImagesDataset(
+    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1'}, gen_types='clear',
+    models={'vit_base_patch16_224_miil'})
+dataset_top1_clear_base32 = MixedPredictiveImagesDataset(
+    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1'}, gen_types='clear',
+    models={'vit_base_patch32_224'})
+dataset_top1_clear_large = MixedPredictiveImagesDataset(
+    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1'}, gen_types='clear',
+    models={'vit_large_patch16_224'})
+dataset_top1_clear_base_2 = MixedPredictiveImagesDataset(
+    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel-2', tops={'1'}, gen_types='clear',
+    models={'vit_base_patch16_224'})
+dataset_top1_clear_basemiil_2 = MixedPredictiveImagesDataset(
+    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel-2', tops={'1'}, gen_types='clear',
+    models={'vit_base_patch16_224_miil'})
+dataset_top1_clear_base32_2 = MixedPredictiveImagesDataset(
+    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel-2', tops={'1'}, gen_types='clear',
+    models={'vit_base_patch32_224'})
+dataset_top1_clear_large_2 = MixedPredictiveImagesDataset(
+    'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel-2', tops={'1'}, gen_types='clear',
+    models={'vit_large_patch16_224'})
 
-# print("fid top_1_clear")
-# top_1_clear = fid_score(dataset_top1_clear, 'A:\\CVData\\ImageNet\\val_fid_distr',
-#                         store_path='A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel\\fid_top1_clear_corrected.json',
+
+m_dataset_top1_base = MixedPredictiveImagesMacoDataset(
+    'A:\\CVData\\project-images\\images-mixed-1280-fc1-multimodel-maco', 
+    tops={'1'}, models={'vit_base_patch16_224'})
+m_dataset_top1_basemiil = MixedPredictiveImagesMacoDataset(
+    'A:\\CVData\\project-images\\images-mixed-1280-fc1-multimodel-maco', 
+    tops={'1'}, models={'vit_base_patch16_224_miil'})
+m_dataset_top1_base32 = MixedPredictiveImagesMacoDataset(
+    'A:\\CVData\\project-images\\images-mixed-1280-fc1-multimodel-maco', 
+    tops={'1'}, models={'vit_base_patch32_224'})
+m_dataset_top1_large = MixedPredictiveImagesMacoDataset(
+    'A:\\CVData\\project-images\\images-mixed-1280-fc1-multimodel-maco', 
+    tops={'1'}, models={'vit_large_patch16_224'})
+m_dataset_top1_base_2 = MixedPredictiveImagesMacoDataset(
+    'A:\\CVData\\project-images\\images-mixed-1280-fc1-multimodel-maco-2', 
+    tops={'1'}, models={'vit_base_patch16_224'})
+m_dataset_top1_basemiil_2 = MixedPredictiveImagesMacoDataset(
+    'A:\\CVData\\project-images\\images-mixed-1280-fc1-multimodel-maco-2', 
+    tops={'1'}, models={'vit_base_patch16_224_miil'})
+m_dataset_top1_base32_2 = MixedPredictiveImagesMacoDataset(
+    'A:\\CVData\\project-images\\images-mixed-1280-fc1-multimodel-maco-2', 
+    tops={'1'}, models={'vit_base_patch32_224'})
+m_dataset_top1_large_2 = MixedPredictiveImagesMacoDataset(
+    'A:\\CVData\\project-images\\images-mixed-1280-fc1-multimodel-maco-2', 
+    tops={'1'}, models={'vit_large_patch16_224'})
+# dataset_top12_uw_clear = MixedPredictiveImagesDataset(
+#     'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2'}, gen_types='clear', weighting_scheme='unweighted')
+# dataset_top12_sm_clear = MixedPredictiveImagesDataset(
+#     'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2'}, gen_types='clear', weighting_scheme='softmax')
+# dataset_top123_uw_clear = MixedPredictiveImagesDataset(
+#     'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2,3'}, gen_types='clear', weighting_scheme='unweighted')
+# dataset_top123_sm_clear = MixedPredictiveImagesDataset(
+#     'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2,3'}, gen_types='clear', weighting_scheme='softmax')
+# dataset_top1234_uw_clear = MixedPredictiveImagesDataset(
+#     'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2,3,4'}, gen_types='clear',
+#     weighting_scheme='unweighted'
+# )
+# dataset_top1234_sm_clear = MixedPredictiveImagesDataset(
+#     'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2,3,4'}, gen_types='clear',
+#     weighting_scheme='softmax'
+# )
+# dataset_top1_div = MixedPredictiveImagesDataset(
+#     'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1'}, gen_types='div')
+# dataset_top12_uw_div = MixedPredictiveImagesDataset(
+#     'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2'}, gen_types='div', weighting_scheme='unweighted')
+# dataset_top12_sm_div = MixedPredictiveImagesDataset(
+#     'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2'}, gen_types='div', weighting_scheme='softmax')
+# dataset_top123_uw_div = MixedPredictiveImagesDataset(
+#     'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2,3'}, gen_types='div', weighting_scheme='unweighted')
+# dataset_top123_sm_div = MixedPredictiveImagesDataset(
+#     'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2,3'}, gen_types='div', weighting_scheme='softmax')
+# dataset_top1234_uw_div = MixedPredictiveImagesDataset(
+#     'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2,3,4'}, gen_types='div',
+#     weighting_scheme='unweighted'
+# )
+# dataset_top1234_sm_div = MixedPredictiveImagesDataset(
+#     'A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel', tops={'1,2,3,4'}, gen_types='div',
+#     weighting_scheme='softmax'
+# )
+
+# print("fid top_1_clear base")
+# top_1_clear_base = fid_score([dataset_top1_clear_base, dataset_top1_clear_base_2], 
+#                              'A:\\CVData\\ImageNet\\val_fid_distr',
+#                         store_path='A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel\\fid_top1_clear_vit_base_patch16_224.json',
 #                         device=device)
+# print("fid top_1_clear basemiil")
+# top_1_clear_base = fid_score([dataset_top1_clear_basemiil, dataset_top1_clear_basemiil_2], 
+#                              'A:\\CVData\\ImageNet\\val_fid_distr',
+#                         store_path='A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel\\fid_top1_clear_vit_base_patch16_224_miil.json',
+#                         device=device)
+# print("fid top_1_clear base32")
+# top_1_clear_base = fid_score([dataset_top1_clear_base32, dataset_top1_clear_base32_2], 
+#                              'A:\\CVData\\ImageNet\\val_fid_distr',
+#                         store_path='A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel\\fid_top1_clear_vit_base_patch32_224.json',
+#                         device=device)
+# print("fid top_1_clear large")
+# top_1_clear_base = fid_score([dataset_top1_clear_large, dataset_top1_clear_large_2], 
+#                              'A:\\CVData\\ImageNet\\val_fid_distr',
+#                         store_path='A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel\\fid_top1_clear_vit_large_patch16_224.json',
+#                         device=device)
+
+# print('fid top_1 maco base')
+# top_1 = fid_score([m_dataset_top1_base, m_dataset_top1_base_2], 
+#                   'A:\\CVData\\ImageNet\\val_fid_distr',
+#                         store_path='A:\\CVData\\project-images\\images-mixed-1280-fc1-multimodel-maco\\fid_top1_vit_base_patch16_224.json',
+#                         device=device)
+# print('fid top_1 maco basemiil')
+# top_1 = fid_score([m_dataset_top1_basemiil, m_dataset_top1_basemiil_2], 
+#                   'A:\\CVData\\ImageNet\\val_fid_distr',
+#                         store_path='A:\\CVData\\project-images\\images-mixed-1280-fc1-multimodel-maco\\fid_top1_vit_base_patch16_224_miil.json',
+#                         device=device)
+# print('fid top_1 maco base32')
+# top_1 = fid_score([m_dataset_top1_base32, m_dataset_top1_base32_2], 
+#                   'A:\\CVData\\ImageNet\\val_fid_distr',
+#                         store_path='A:\\CVData\\project-images\\images-mixed-1280-fc1-multimodel-maco\\fid_top1_vit_base_patch32_224.json',
+#                         device=device)
+# print('fid top_1 maco large')
+# top_1 = fid_score([m_dataset_top1_large, m_dataset_top1_large_2], 
+#                   'A:\\CVData\\ImageNet\\val_fid_distr',
+#                         store_path='A:\\CVData\\project-images\\images-mixed-1280-fc1-multimodel-maco\\fid_top1_vit_large_patch16_224.json',
+#                         device=device)
+
 # print("fid top_12_uw_clear")
 # top_12_uw_clear = fid_score(dataset_top12_uw_clear, 'A:\\CVData\\ImageNet\\val_fid_distr',
 #                             store_path='A:\\CVData\\project-images\\images-mixed-224-fc1-multimodel\\fid_top12_uw_clear_corrected.json',
@@ -622,20 +707,20 @@ dataset_top1234_sm_div = MixedPredictiveImagesDataset(
 #                               device=device)
 
 
-# datasets_by_block = {
-#     (i, gen_type): ImagesByBlockDataset('A:\\CVData\\project-images\\images-by-block-224-fc1\\images-by-block',
-#                             models=['vit_base_patch16_224', 'vit_base_patch32_224'],
-#                             block_by_model={'vit_base_patch16_224': [i], 
-#                                              'vit_base_patch32_224': [i]},
-#                             gen_types=gen_type)
-#     for i in range(12) for gen_type in ['clear', 'cls_token']
-# }
+datasets_by_block = {
+    (i, gen_type): ImagesByBlockDataset('A:\\CVData\\project-images\\images-by-block-224-fc1',
+                            models=['vit_base_patch16_224', 'vit_base_patch32_224'],
+                            block_by_model={'vit_base_patch16_224': [i], 
+                                             'vit_base_patch32_224': [i]},
+                            gen_types=gen_type)
+    for i in range(5, 12) for gen_type in ['clear', 'cls_token']
+}
 
-# for (block, gen_type), ds in datasets_by_block.items():
-#     print(f'fid by block {block} and gen_type {gen_type}')
-#     fid_score(ds, 'A:\\CVData\\ImageNet\\val_fid_distr',
-#               store_path=f'A:\\CVData\\project-images\\images-by-block-224-fc1\\block_{block}_{gen_type}.json', device=device)
+for (block, gen_type), ds in datasets_by_block.items():
+    print(f'fid by block {block} and gen_type {gen_type}')
+    fid_score(ds, 'A:\\CVData\\ImageNet\\val_fid_distr',
+              store_path=f'A:\\CVData\\project-images\\images-by-block-224-fc1\\block_{block}_{gen_type}.json', device=device)
 
-print('plausibility by block')
-plausibility = plausibility_score(imagenet, ['A:\\CVData\\project-images\\images-by-block-224-fc1\\plausibility_with_gen.db'], [dataset_by_block], device=device)
+# print('plausibility by block')
+# plausibility = plausibility_score(imagenet, ['A:\\CVData\\project-images\\images-by-block-224-fc1\\plausibility_with_gen.db'], [dataset_by_block], device=device)
 

@@ -5,16 +5,18 @@ from generate_images_mixed_neurons import generate_images
 from PIL import Image
 import time
 
-CONFIG_PATH = '/scratch/vihps/vihps01/vit-interpretability-thesis/configs-mixed-neurons'
-RESULTS_PATH = '/scratch/vihps/vihps01/vit-interpretability-thesis/images-mixed-neurons'
+job_index = os.environ['SLURM_PROCID']
+node_name = os.environ['SLURMD_NODENAME']
+job_id = os.eviron['SLURM_JOB_ID']
+
+CONFIG_PATH = '/scratch/vihps/vihps01/vit-interpretability-thesis/configs-mixed-neurons-multi'
+RESULTS_PATH = '/scratch/vihps/vihps01/vit-interpretability-thesis/images-mixed-neurons_' + str(job_id)
 RESULT_STATS_PATH = '/scratch/vihps/vihps01/vit-interpretability-thesis/job-reports'
 
 os.makedirs(CONFIG_PATH, exist_ok=True)
 os.makedirs(RESULTS_PATH, exist_ok=True)
 os.makedirs(RESULT_STATS_PATH, exist_ok=True)
 
-job_index = os.environ['SLURM_PROCID']
-node_name = os.environ['SLURMD_NODENAME']
 
 os.environ['MIOPEN_USER_DB_PATH'] = f'/scratch/vihps/vihps01/.config/miopen_{job_index}/'
 

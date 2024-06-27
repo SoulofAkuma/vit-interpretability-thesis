@@ -33,7 +33,7 @@ default_tops = [
     '1',
 ]
 
-crop = tf.CenterCrop((640, 640))
+crop = tf.CenterCrop((640, 640)) # center crop for predictions as used by the MACO authors
 
 class ItemT(TypedDict):
     imagenet_id: str
@@ -51,14 +51,16 @@ class MixedPredictiveImagesMacoDataset(IndexDataset):
                  iterations: Set[iter_T] = [1000], models: Set[models_T] = default_models, 
                  tops: Set[tops_T] = default_tops, 
                  weighting_scheme: Union[Literal['all'], weighting_scheme_T] = 'all',
-                 transforms: Union[None, tf.Compose, Dict[str, tf.Compose]]=None):
+                 transforms: Union[None, tf.Compose, Dict[str, tf.Compose]]=None,
+                 rgba: bool=False):
         super().__init__()
         self.dataset_path = dataset_path
         self.transforms=transforms
         
         self.iterations = list(iterations)
         self.models = list(models)
-        
+        self.rgba = rgba
+
         self.weight_top_combs: List[Tuple[tops_T, weighting_scheme_T]] = [
             tuple(comb) 
             for comb in product(list(filter(lambda x: x!='1', tops)), 
@@ -113,7 +115,11 @@ class MixedPredictiveImagesMacoDataset(IndexDataset):
         img_name = f'{cls.name}.png'
         img_path = os.path.join(self.dataset_path, model, str(iteration), 
                                 f'top_{weight_top_comb[0]}', weight_top_comb[1], img_name)
-        item['img'] = Image.open(img_path).convert('RGB')
+        if self.rgba:
+            item['img'] = Image.open(img_path).convert('RGBA')
+        else:
+            item['img'] = Image.open(img_path).convert('RGB')
+
         if type(self.transforms) is dict:
             for key, transforms in self.transforms.items():
                 item[f'img_{key}'] = transforms(crop(item['img']))

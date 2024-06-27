@@ -10,10 +10,10 @@ from typing import Dict, List, Tuple
 import torch.nn.functional as F
 
 MODELS = [
-    # 'vit_base_patch16_224',
-    # 'vit_base_patch32_224',
+    'vit_base_patch16_224',
+    'vit_base_patch32_224',
+    'vit_base_patch16_224_miil',
     'vit_large_patch16_224',
-    'vit_base_patch16_224_miil'
 ]
 MODEL_IMG_SIZE = 224
 IMAGE_SIZE = 224
@@ -42,12 +42,12 @@ def create_configs(dir: str):
 
         # 1000 / 63 = 15.625 => 16 configs for 16 gpus
         if MODEL == 'vit_large_patch16_224':
-            for i in range(800, 1000, 13):
+            for i in range(0, 1000, 63):
                 # name of the generation, list of block index, row index, weight
                 imagenet_classes: Dict[str, List[Tuple[int, int, float]]] = {}
 
                 # 64 classes per gpu
-                for ii in range(0, 13):
+                for ii in range(45, 63):
                     if i + ii >= 1000:
                         break
                     inds_for_cls = most_pred_inds[:,i+ii].tolist()
@@ -57,7 +57,7 @@ def create_configs(dir: str):
                         for iii in range(len(model.blocks))
                     }
 
-                configs[(i-800)//13].append({
+                configs[i//63].append({
                         'model': MODEL,
                         'model_img_size': MODEL_IMG_SIZE,
                         'classes': imagenet_classes,
