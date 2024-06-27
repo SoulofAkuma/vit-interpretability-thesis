@@ -19,7 +19,7 @@ def generate_images(model_name, image_size_lucid, image_size_maco, model_img_siz
         block = classes[cls]['block']
         index = classes[cls]['index']
 
-        for img_ind in range(10):
+        for img_ind in range(15):
             objective = vl.key_neuron_objective(block, index)
 
             param_f_clear = lambda: param.image(image_size_lucid, device=device)

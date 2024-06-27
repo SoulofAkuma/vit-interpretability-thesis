@@ -44,8 +44,8 @@ for model_config in config:
                                                 model_config['image_size_lucid'], 
                                                 model_config['image_size_maco'], 
                                                 model_config['model_img_size'], 
-                                                [model_config['thresholds_lucid']], 
-                                                [model_config['thresholds_maco']], 
+                                                model_config['thresholds_lucid'], 
+                                                model_config['thresholds_maco'], 
                                                 model_config['classes'], device)
 
     images_generated[model_config['model']] = [*list(images_lucid.keys()), *list(images_maco.keys())]

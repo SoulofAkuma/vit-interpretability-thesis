@@ -3,8 +3,8 @@
 #SBATCH --output=/scratch/vihps/vihps01/stdouts/%j.out
 #SBATCH --error=/scratch/vihps/vihps01/stderrs/%j.err
 #SBATCH --partition=gpu
-#SBATCH --nodes=2
-#SBATCH --ntasks=16
+#SBATCH --nodes=4
+#SBATCH --ntasks=32
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=0
 #SBATCH --gres=gpu:8

@@ -56,7 +56,7 @@ def create_configs(dir: str):
                     'index': most_pred_inds[1,i+ii].item()
                 }
 
-            configs[i//63].append({
+            configs[i//32].append({
                     'model': MODEL,
                     'model_img_size': MODEL_IMG_SIZE,
                     'classes': imagenet_classes,
