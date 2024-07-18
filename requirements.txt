@@ -13,7 +13,7 @@ timm == 0.6.12
 tqdm == 4.64.1
 torch == 2.0.1+cu118
 torchvision == 0.15.2+cu118
-transformers == 4.26.0
+transformers == 4.38.0
 tabulate
 pyperclip
 
